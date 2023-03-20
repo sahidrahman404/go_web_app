@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 type application struct {
@@ -14,7 +17,11 @@ type application struct {
 
 func main() {
 	addr := flag.String("addr", ":4000", "Http network address")
-
+	dsn := flag.String(
+		"dsn",
+		os.Getenv("DATABASE_URL"),
+		"postgres data source name",
+	)
 	flag.Parse()
 
 	infoLog := log.New(os.Stdout, "INTO\t", log.Ldate|log.Ltime)
@@ -25,6 +32,12 @@ func main() {
 		infoLog:  infoLog,
 	}
 
+	db, err := openDB(*dsn)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+	defer db.Close()
+
 	srv := &http.Server{
 		Addr:     *addr,
 		ErrorLog: errorLog,
@@ -32,6 +45,17 @@ func main() {
 	}
 
 	infoLog.Printf("Starting server on :%s", *addr)
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+	if err = db.Ping(); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
