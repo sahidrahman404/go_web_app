@@ -8,11 +8,13 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
+	"github.com/sahidrahman404/snippetbox/pkg/models/postgres"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
+	snippets *postgres.SnippetModel
 }
 
 func main() {
@@ -27,16 +29,18 @@ func main() {
 	infoLog := log.New(os.Stdout, "INTO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime)
 
-	app := &application{
-		errorLog: errorLog,
-		infoLog:  infoLog,
-	}
-
 	db, err := openDB(*dsn)
 	if err != nil {
 		errorLog.Fatal(err)
 	}
+
 	defer db.Close()
+
+	app := &application{
+		errorLog: errorLog,
+		infoLog:  infoLog,
+		snippets: &postgres.SnippetModel{DB: db},
+	}
 
 	srv := &http.Server{
 		Addr:     *addr,
