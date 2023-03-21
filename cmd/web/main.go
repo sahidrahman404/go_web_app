@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/golangcollege/sessions"
 	_ "github.com/lib/pq"
 	"github.com/sahidrahman404/snippetbox/pkg/models/postgres"
 )
@@ -15,6 +17,7 @@ import (
 type application struct {
 	errorLog      *log.Logger
 	infoLog       *log.Logger
+	session       *sessions.Session
 	snippets      *postgres.SnippetModel
 	templateCache map[string]*template.Template
 }
@@ -26,6 +29,7 @@ func main() {
 		os.Getenv("DATABASE_URL"),
 		"postgres data source name",
 	)
+	secret := flag.String("secret", "s6Ndh+pPbnzHbS*+9Pk8qGWhTzbpa@ge", "Secret key")
 	flag.Parse()
 
 	infoLog := log.New(os.Stdout, "INTO\t", log.Ldate|log.Ltime)
@@ -43,9 +47,13 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
+	session := sessions.New([]byte(*secret))
+	session.Lifetime = 12 * time.Hour
+
 	app := &application{
 		errorLog:      errorLog,
 		infoLog:       infoLog,
+		session:       session,
 		snippets:      &postgres.SnippetModel{DB: db},
 		templateCache: templateCache,
 	}
